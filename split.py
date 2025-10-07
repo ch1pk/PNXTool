@@ -117,10 +117,13 @@ def split_file():
     base_name, ext = os.path.splitext(os.path.basename(file_path))
     folder = os.path.dirname(file_path)
 
-    # выбираем префикс: дата если найдена, иначе безопасная версия base_name
+    # ищем дату
     date_part = extract_date_from_filename(base_name)
+
     if date_part:
-        prefix = date_part
+        # сохраняем всё после даты, включая пробелы/символы
+        rest = base_name.split(date_part, 1)[1].lstrip("_ ")  # убираем подчеркивание или пробел после даты
+        prefix = f"{date_part}_{rest}" if rest else date_part
     else:
         prefix = _sanitize_part(base_name)
 
@@ -128,8 +131,8 @@ def split_file():
     for cat, cat_lines in output.items():
         if not cat_lines:
             continue
-        # формируем имя: <prefix>_<category><ext>
-        out_name = f"{prefix}_{cat}{ext}"
+        # формируем имя: "<prefix> <category>.pnx"
+        out_name = f"{prefix} {cat}{ext}"
         out_path = os.path.join(folder, out_name)
         try:
             with open(out_path, "w", encoding="cp1251", errors="replace") as f:
