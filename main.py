@@ -152,12 +152,14 @@ def create_split_tab(notebook):
 # Вкладка 3: Замена текста
 # ---------------------------
 def create_replace_tab(notebook, root):
+    import tkinter as tk
+    from tkinter import ttk, filedialog
+    from replace import load_replace_rules, save_replace_rules, apply_replacements_to_files, DEFAULT_REPLACE_RULES_FILE
+
     tab = ttk.Frame(notebook)
     notebook.add(tab, text="Замена текста")
 
-    from replace import load_replace_rules, save_replace_rules
-
-    replace_rules = load_replace_rules(REPLACE_RULES_FILE)
+    replace_rules = load_replace_rules(DEFAULT_REPLACE_RULES_FILE)
 
     columns = ("old", "new")
     tree = ttk.Treeview(tab, columns=columns, show="headings", height=15)
@@ -165,10 +167,15 @@ def create_replace_tab(notebook, root):
     tree.heading("new", text="На что заменить")
     tree.pack(padx=10, pady=10, fill="both", expand=True)
 
+    # --- заполняем таблицу ---
     for r in replace_rules:
         tree.insert("", tk.END, values=(r["old"], r["new"]))
 
-    # Добавление правила
+    # --- кнопки управления ---
+    btn_frame = tk.Frame(tab)
+    btn_frame.pack(pady=5, fill="x")
+
+    # --- Добавление ---
     def add_rule():
         add_window = tk.Toplevel(root)
         add_window.title("Добавить замену")
@@ -178,24 +185,49 @@ def create_replace_tab(notebook, root):
         old_entry.grid(row=0, column=1, padx=5, pady=5)
         new_entry = tk.Entry(add_window, width=50)
         new_entry.grid(row=1, column=1, padx=5, pady=5)
+
         def save_new():
-            tree.insert("", tk.END, values=(old_entry.get(), new_entry.get()))
+            old = old_entry.get().strip()
+            new = new_entry.get().strip()
+            if not old:
+                messagebox.showwarning("Ошибка", "Поле 'Что заменить' не может быть пустым!")
+                return
+            tree.insert("", tk.END, values=(old, new))
             add_window.destroy()
+
         tk.Button(add_window, text="Добавить", command=save_new).grid(row=2, column=0, columnspan=2, pady=10)
 
-    # Кнопки управления
-    btn_frame_replace = tk.Frame(tab)
-    btn_frame_replace.pack(pady=5, fill="x")
+    # --- Удаление выбранных ---
+    def delete_selected():
+        selected = tree.selection()
+        if not selected:
+            messagebox.showinfo("Удаление", "Выберите хотя бы одну строку для удаления.")
+            return
+        if messagebox.askyesno("Подтверждение", f"Удалить {len(selected)} правил?"):
+            for item in selected:
+                tree.delete(item)
+            messagebox.showinfo("Готово", "Выбранные правила удалены.")
 
+    # --- Сохранение ---
     def save_all_rules():
-        rules_list = [{"old": tree.item(i, "values")[0], "new": tree.item(i, "values")[1]} for i in tree.get_children()]
-        save_replace_rules(rules_list, REPLACE_RULES_FILE)
+        rules_list = [
+            {"old": tree.item(i, "values")[0], "new": tree.item(i, "values")[1]}
+            for i in tree.get_children()
+        ]
+        save_replace_rules(rules_list, DEFAULT_REPLACE_RULES_FILE)
+        messagebox.showinfo("Сохранено", "Правила успешно сохранены.")
 
+    # --- Применение ---
     def apply_replacement():
-        rules_list = [{"old": tree.item(item, "values")[0], "new": tree.item(item, "values")[1]} for item in tree.get_children()]
+        rules_list = [
+            {"old": tree.item(i, "values")[0], "new": tree.item(i, "values")[1]}
+            for i in tree.get_children()
+        ]
 
-        file_paths = filedialog.askopenfilenames(title="Выберите файлы для замены",
-                                                 filetypes=[("PNX файлы", "*.pnx"), ("Все файлы", "*.*")])
+        file_paths = filedialog.askopenfilenames(
+            title="Выберите файлы для замены",
+            filetypes=[("PNX файлы", "*.pnx"), ("Все файлы", "*.*")]
+        )
         if not file_paths:
             return
 
@@ -204,12 +236,14 @@ def create_replace_tab(notebook, root):
         log_text = tk.Text(log_window, width=100, height=30)
         log_text.pack(padx=10, pady=10, fill="both", expand=True)
 
-        from replace import apply_replacements_to_files
         apply_replacements_to_files(rules_list, file_paths, log_text_widget=log_text)
 
-    tk.Button(btn_frame_replace, text="Добавить", command=add_rule).pack(side=tk.LEFT, padx=5)
-    tk.Button(btn_frame_replace, text="Сохранить правила", command=save_all_rules).pack(side=tk.LEFT, padx=5)
-    tk.Button(btn_frame_replace, text="Применить замену", command=apply_replacement).pack(side=tk.RIGHT, padx=5)
+    # --- Кнопки ---
+    tk.Button(btn_frame, text="Добавить", command=add_rule).pack(side=tk.LEFT, padx=5)
+    tk.Button(btn_frame, text="Удалить выбранное", command=delete_selected).pack(side=tk.LEFT, padx=5)
+    tk.Button(btn_frame, text="Сохранить правила", command=save_all_rules).pack(side=tk.LEFT, padx=5)
+    tk.Button(btn_frame, text="Применить замену", command=apply_replacement).pack(side=tk.RIGHT, padx=5)
+
 
 
 # ---------------------------
