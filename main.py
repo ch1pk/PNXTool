@@ -244,6 +244,67 @@ def create_replace_tab(notebook, root):
     tk.Button(btn_frame, text="Сохранить правила", command=save_all_rules).pack(side=tk.LEFT, padx=5)
     tk.Button(btn_frame, text="Применить замену", command=apply_replacement).pack(side=tk.RIGHT, padx=5)
 
+# ---------------------------
+# Вкладка 4: Добавление даты
+# ---------------------------
+def create_add_date_tab(notebook, root):
+    import tkinter as tk
+    from tkinter import ttk, filedialog, messagebox
+    from add_date import append_date_to_files
+
+    tab = ttk.Frame(notebook)
+    notebook.add(tab, text="Добавить дату")
+
+    mode_var = tk.StringVar(value="from_filename")  # from_filename | manual
+    manual_date_var = tk.StringVar(value="2025-12-19")
+
+    # --- выбор режима ---
+    mode_frame = tk.LabelFrame(tab, text="Источник даты")
+    mode_frame.pack(fill="x", padx=10, pady=10)
+
+    rb1 = tk.Radiobutton(mode_frame, text="Взять дату из имени файла (YYYY-MM-DD)", variable=mode_var, value="from_filename")
+    rb1.pack(anchor="w", padx=10, pady=3)
+
+    rb2 = tk.Radiobutton(mode_frame, text="Ввести дату вручную (YYYY-MM-DD)", variable=mode_var, value="manual")
+    rb2.pack(anchor="w", padx=10, pady=3)
+
+    # --- ввод даты вручную ---
+    manual_frame = tk.Frame(tab)
+    manual_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+    tk.Label(manual_frame, text="Дата:").pack(side=tk.LEFT)
+    manual_entry = tk.Entry(manual_frame, textvariable=manual_date_var, width=15)
+    manual_entry.pack(side=tk.LEFT, padx=8)
+
+    def refresh_manual_state(*_):
+        state = tk.NORMAL if mode_var.get() == "manual" else tk.DISABLED
+        manual_entry.config(state=state)
+
+    mode_var.trace_add("write", refresh_manual_state)
+    refresh_manual_state()
+
+    # --- кнопка запуска ---
+    def run():
+        file_paths = filedialog.askopenfilenames(
+            title="Выберите файлы для добавления даты",
+            filetypes=[("PNX файлы", "*.pnx"), ("Все файлы", "*.*")]
+        )
+        if not file_paths:
+            return
+
+        log_window = tk.Toplevel(root)
+        log_window.title("Лог добавления даты")
+        log_text = tk.Text(log_window, width=100, height=30)
+        log_text.pack(padx=10, pady=10, fill="both", expand=True)
+
+        append_date_to_files(
+            file_paths=file_paths,
+            mode=mode_var.get(),
+            manual_date=manual_date_var.get(),
+            log_text_widget=log_text
+        )
+
+    tk.Button(tab, text="Выбрать файлы и добавить дату", command=run).pack(padx=10, pady=10, anchor="e")
 
 
 # ---------------------------
@@ -259,8 +320,10 @@ def main():
     create_combine_tab(notebook)
     create_split_tab(notebook)
     create_replace_tab(notebook, root)
+    create_add_date_tab(notebook, root)  # <-- добавили
 
     root.mainloop()
+
 
 
 if __name__ == "__main__":
