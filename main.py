@@ -313,6 +313,7 @@ def create_add_date_tab(notebook, root):
 def main():
     root = tk.Tk()
     root.title("PNX Tool")
+    root.resizable(False, False)  # запрет изменения размера
 
     notebook = ttk.Notebook(root)
     notebook.pack(expand=True, fill="both")
